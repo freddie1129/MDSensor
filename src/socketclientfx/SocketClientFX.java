@@ -27,7 +27,7 @@ public class SocketClientFX extends Application {
         Scene scene = new Scene(root);
         
         stage.setScene(scene);
-        stage.setTitle(this.getClass().getSimpleName());
+        stage.setTitle("Sensor Simulator");
         stage.show();
         
         stage.setOnCloseRequest(new EventHandler<WindowEvent>() {

@@ -11,33 +11,25 @@ import javafx.event.Event;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.scene.control.Button;
-import javafx.scene.control.CheckBox;
-import javafx.scene.control.Label;
 import javafx.scene.control.ListView;
 import javafx.scene.control.SelectionMode;
 import javafx.scene.control.TextField;
 import socketfx.Constants;
 import socketfx.FxSocketClient;
 import socketfx.SocketListener;
+import java.nio.charset.StandardCharsets;
 
 import static java.lang.Math.*;
-import java.io.ByteArrayOutputStream;
-import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.PipedInputStream;
 
-import socketclientfx.DataFactory;
-
-import javafx.beans.property.SimpleStringProperty;
-import javafx.beans.property.SimpleIntegerProperty;
-import javafx.beans.property.SimpleDoubleProperty;
 import javafx.scene.control.TableView;
-import socketclientfx.*;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 
 import java.lang.Thread.*;
 import java.lang.InterruptedException;
+import java.nio.ByteBuffer;
 
 import java.util.Timer;
 import java.util.TimerTask;
@@ -121,6 +113,9 @@ public class FXMLDocumentController implements Initializable {
     private TextField FreTextField;
     @FXML
     private TextField FsTextField;
+    @FXML
+    private TextField TagTextField;
+
 //    @FXML
 //    private Button startButton;
 
@@ -142,6 +137,7 @@ public class FXMLDocumentController implements Initializable {
 //    private TextField selectedTextField;
     @FXML
     private TextField signalFreTextFile;
+
     @FXML
     private Button connectButton;
     @FXML
@@ -220,8 +216,7 @@ public class FXMLDocumentController implements Initializable {
                 hostTextField.getText(),
                 Integer.valueOf(portTextField.getText()),
                 Constants.instance().DEBUG_SEND);
-        socket.connect();
-        
+        socket.connect();        
     }
 
     private void autoConnect() {
@@ -305,15 +300,28 @@ public class FXMLDocumentController implements Initializable {
         int num = data.size() + 1;
         double fre = Double.parseDouble(FreTextField.getText());
         double fs = Double.parseDouble(FsTextField.getText());
+        
+        String strTag =  String.format("%s%03d",TagTextField.getText(),num);    
+        
+        
 
-        data.add(new Frequency(num, fre, fs));
+        
+
+        data.add(new Frequency(num, fre, fs, strTag));
 
         num = tableView.getItems().size();
         dataSource.ResetFactory();
 
         for (int i = 0; i < num; i++) {
-            dataSource.addSig(data.get(i).getFre());
-            dataSource.setFs(data.get(i).getFs());
+         //   String stringTag = data.get(i).getTag() + String.format("Duke's Birthday: %1$tm %1$te,%1$tY", c);
+            
+
+            
+                    dataSource.addSig(data.get(i).getFre(),
+                                data.get(i).getFs(),
+                                data.get(i).getTag().toCharArray());
+           // dataSource.addSig(data.get(i).getFre(),data.get(i).getFs(),);
+            //dataSource.setFs(data.get(i).getFs());
         }
     }
 
@@ -338,6 +346,17 @@ public class FXMLDocumentController implements Initializable {
                     int value = Integer.parseInt(newValue);
                 } else {
                     FsTextField.setText(oldValue);
+                }
+            }
+        });
+        
+        TagTextField.textProperty().addListener(new ChangeListener<String>() {
+            @Override
+            public void changed(ObservableValue<? extends String> observable, String oldValue, String newValue) {
+                if (newValue.matches("\\p{Upper}")) {
+                    int value = Integer.parseInt(newValue);
+                } else {
+                    TagTextField.setText(oldValue);
                 }
             }
         });
@@ -492,12 +511,21 @@ public class FXMLDocumentController implements Initializable {
 
         timer.cancel();
     }
-
+        public double[] toDouble(byte[] bytes, int num) {
+            double[] da = new double[num / 8];
+            for (int i = 0; i < num / 8; i++) {
+                byte[] te = new byte[8];
+                System.arraycopy(bytes, i * 8, te, 0, 8);
+                da[i] = ByteBuffer.wrap(te).getDouble();
+            }
+            return da;
+        }
+        
     public void SendData() {
 
         System.out.println("**********************");
         String strLog = "";
-        int len = 200;
+        int len = 8 * tableView.getItems().size();
         byte[] dIn = new byte[len];
         int rlen;
         int p = 0;
@@ -513,26 +541,72 @@ public class FXMLDocumentController implements Initializable {
                 System.out.println(e);
             }
         } while (p != len);
+        
+        double[] test = toDouble(dIn,dIn.length);
+        for (int i = 0; i < test.length; i++)
+        {
+             strLog = strLog + String.format(" %02f", test[i]);       
+        }
+             System.out.println(strLog);
+        
+        strLog = "";
         for (int i = 0; i < dIn.length; i++) {
             strLog = strLog + String.format(" %02d", dIn[i]);
         }
         System.out.println(strLog);
         strLog = "";
+        
+        short PN = (short) PointsNum;                       //Number of points, usually 1
+        short CN = (short) tableView.getItems().size();     //Number of signal, 
+        byte[]  frameHead = new byte[8 + CN * 4 + len];        
+        frameHead[0] = 'f';
+        frameHead[1] = 'a';
+        frameHead[2] = 'f';
+        frameHead[3] = 'e';        
+        frameHead[4] = (byte) (PN >>> 8);
+        frameHead[5] = (byte) (PN & 0xFF);
+        frameHead[6] = (byte) (CN >>> 8);
+        frameHead[7] = (byte) (CN & 0xFF);       
+        
+        ObservableList<Frequency> data = tableView.getItems();
+        for (int i = 0; i < data.size(); i++)
+        {
+            byte[] tag = data.get(i).getTag().getBytes(StandardCharsets.UTF_8);
+            char[] chartag = data.get(i).getTag().toCharArray(); //  .getBytes(StandardCharsets.UTF_8);
+            System.arraycopy(data.get(i).getTag().getBytes(StandardCharsets.UTF_8), 0, frameHead, 8 + i * 4, 4);
+        }
+        System.arraycopy(dIn,0,frameHead,8 + CN * 4 ,len);
+        
+        
+        short pointNum = (short) (frameHead[4]<< 8 | frameHead[5] & 0xFF);
+                        short sigNum = (short) (frameHead[6]<< 8 | frameHead[7] & 0xFF);
+                        
 
-        byte[] fh = new byte[8];
-        fh[0] = 'f';
-        fh[1] = 'a';
-        fh[2] = 'f';
-        fh[3] = 'e';
-        short PN = (short) PointsNum;
-        fh[4] = (byte) (PN >>> 8);
-        fh[5] = (byte) (PN & 0xFF);
-        short CN = (short) tableView.getItems().size();
-        fh[6] = (byte) (CN >>> 8);
-        fh[7] = (byte) (CN & 0xFF);
+                        
+                        
+                        
+                        System.out.printf("HEAD:%c%c%c%c Points:%d SignalNum: %d\n", (char)frameHead[0],(char)frameHead[1],(char)frameHead[2],(char)frameHead[3],
+                                                pointNum, sigNum);
+                        
+                        for (int i = 0; i < sigNum; i++)
+                        {
+                             System.out.printf("tag %d: %c%c%c%c\n", 
+                                     i,
+                                     (char)frameHead[8 + i * 4 + 0],
+                                     (char)frameHead[8 + i * 4 + 1],
+                                     (char)frameHead[8 + i * 4 + 2],
+                                     (char)frameHead[8 + i * 4 + 3]);
+                        }
+                        
+                        
+                        
+        
+        
 
-        socket.sendMessage(fh, 0, fh.length);
-        socket.sendMessage(dIn, 0, dIn.length);
+        
+        socket.sendMessage(frameHead, 0, frameHead.length);
+      //  socket.sendMessage(dIn, 0, dIn.length);
+        System.out.printf("SendLength = %d", dIn.length);
     }
 
     @FXML

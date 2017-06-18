@@ -54,7 +54,7 @@ public class Constants {
     /*
      * Multicast Socket constants
      */
-    public final int DEFAULT_PORT = 2015;
+    public final int DEFAULT_PORT = 2016;
     public final String DEFAULT_HOST = "127.0.0.1";
     /*
      * Debug flags are a multiple of 2

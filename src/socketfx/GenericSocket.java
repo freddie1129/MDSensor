@@ -223,14 +223,14 @@ public abstract class GenericSocket implements SocketListener {
     public void sendMessage(byte[] cbuf,int off,int len) {
             try {
             char [] endline = new char[1];
-            endline[0] = '\n';
+            //endline[0] = '\n';
             char[] buf1 = new char[len];
             for (int i = 0; i < len; i++)
             {
                 buf1[i] = (char)cbuf[i];
             }
             output.write(buf1, off, len);
-            output.write(endline,0,1);
+            //output.write(endline,0,1);
             //output.newLine();
             output.flush();
             if (debugFlagIsSet(Constants.instance().DEBUG_SEND)) {

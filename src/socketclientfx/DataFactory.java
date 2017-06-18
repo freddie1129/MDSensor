@@ -14,10 +14,23 @@ import static java.lang.Math.sin;
 import java.util.*;
 import static socketclientfx.ConsVar.PointsNum;
 
+
 /**
  *
  * @author freddie
  */
+class TestSignal {
+    double dFre;
+    double dFs;
+    char[] strTag;
+    public TestSignal(double fre,double fs,char [] str )
+    {
+        strTag = new char[4];
+        System.arraycopy(str, 0, strTag, 0, 4);
+        dFre = fre;
+        dFs = fs;
+    }
+}
 class DataFactory extends Thread {
 
     public double gfre;
@@ -27,14 +40,25 @@ class DataFactory extends Thread {
     public int blockLen;            //length of each frame
     public PipedOutputStream pipeOut;
 
-    List<Double> SigFreList = new ArrayList<Double>();
+    List<TestSignal> SigFreList = new ArrayList<TestSignal>();
 
     public DataFactory() {
         pipeOut = new PipedOutputStream();
     }
 
-    public void addSig(double fre) {
-        SigFreList.add(fre);
+    //public void addSig(double fre) {
+    //    
+    //    SigFreList.add(fre);
+    //}
+    public void addSig(double fre,double fs,char []tag) {
+        
+        TestSignal tempTestSignal = new TestSignal(fre, fs, tag);
+        SigFreList.add(tempTestSignal);
+        for (int i = 0 ; i < SigFreList.size(); i ++)
+        {
+            System.out.printf("Test: %f %f %s\n", SigFreList.get(i).dFre, SigFreList.get(i).dFs , String.valueOf(SigFreList.get(i).strTag));
+        }
+        System.out.printf("========================\n");
     }
     
    // public void suspend() {
@@ -126,17 +150,18 @@ class DataFactory extends Thread {
         }
         while (true) {
             try {
-                Thread.sleep(50);
+                Thread.sleep(500);
             } catch (InterruptedException e) {
                 System.out.println(e);
             }
             for (int k = 0; k < numSig; k++) {
-                double fd = SigFreList.get(k);
-                double pstep = 2 * PI * fd / fs;
+                double fd = SigFreList.get(k).dFre;
+                double pstep = 2 * PI * fd / SigFreList.get(k).dFs;
                 for (int i = 0; i < blockLen; i++) {
                     phase[k] += pstep;
                     phase[k] = phase[k] % (2 * PI);
                     s[k][i] = sin(phase[k]);
+
                 }
             }
             byte[] outData = Doubls2Bytes(s);

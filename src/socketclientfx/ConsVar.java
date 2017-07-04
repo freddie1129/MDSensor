@@ -10,7 +10,7 @@ package socketclientfx;
  * @author freddie
  */
 public class ConsVar {
-    public static int PointsNum = 50;
+    public static int PointsNum = 1;
     public ConsVar()
     {
         PointsNum = 50;

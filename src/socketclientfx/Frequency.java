@@ -56,16 +56,17 @@ public class Frequency{
     private final SimpleIntegerProperty num = new SimpleIntegerProperty();
     private final SimpleDoubleProperty fre = new SimpleDoubleProperty();
     private final SimpleDoubleProperty fs = new SimpleDoubleProperty();
-    //private final SimpleStringProperty fs = new SimpleStringProperty();
+    private final SimpleStringProperty tag = new SimpleStringProperty();
     
     public Frequency() {
-        this(1, 0, 0);
+     //   this(1, 0, 0);
     }
-    public Frequency(int n, double fo, double fs)
+    public Frequency(int n, double fo, double fs,String tag)
     {
         setNum(n);
         setFre(fo);
         setFs(fs);
+        setTag(tag);
         
     }
     
@@ -81,6 +82,10 @@ public class Frequency{
     {
         fs.set(d);
     }
+    public void setTag(String t)
+    {
+        tag.set(t);
+    }
     public int getNum()
     {
         return num.get();
@@ -92,5 +97,9 @@ public class Frequency{
     public double getFs()
     {
         return fs.get();
+    }   
+    public String getTag()
+    {
+        return tag.get();
     }   
 }
